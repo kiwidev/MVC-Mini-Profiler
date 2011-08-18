@@ -248,13 +248,21 @@ namespace MvcMiniProfiler
             return new Timing(this, Head, name);
         }
 
-        internal bool StopImpl()
+        /// <summary>
+        /// Stops the profiler and all child timings.
+        /// Also sets the <see cref="IsActive"/> flag to false.
+        /// Call this from within a Stop method
+        /// </summary>
+        /// <returns>False if the profiler is already stopped, True otherwise</returns>
+        protected bool StopImpl()
         {
             if (!_watch.IsRunning)
                 return false;
 
             _watch.Stop();
             foreach (var timing in GetTimingHierarchy()) timing.Stop();
+
+            IsActive = false;
 
             return true;
         }
@@ -340,13 +348,16 @@ namespace MvcMiniProfiler
                     return null;
             }
 
+            // Set the new profiler provider for future requests
+            CurrentProfilerProvider = new HttpContextProfilerProvider();
+
             var result = new MiniProfiler(url.OriginalString, level);
             Current = result;
 
             // don't really want to pass in the context to MiniProfler's constructor or access it statically in there, either
             result.User = (Settings.UserProvider ?? new IpAddressIdentity()).GetUser(context.Request);
 
-            result._isActive = true;
+            result.IsActive = true;
 
             return result;
         }
@@ -371,8 +382,6 @@ namespace MvcMiniProfiler
             // stop our timings - when this is false, we've already called .Stop before on this session
             if (!current.StopImpl())
                 return;
-
-            current._isActive = false;
 
             if (discardResults)
             {
@@ -452,6 +461,13 @@ namespace MvcMiniProfiler
             return UI.MiniProfilerHandler.RenderIncludes(Current, position, showTrivial, showTimeWithChildren, maxTracesToShow);
         }
 
+
+        /// <summary>
+        /// Provides the current profiler as retrieved by <see cref="MiniProfiler.Current"/>.
+        /// </summary>
+        protected static ICurrentProfilerProvider CurrentProfilerProvider { get; set; }
+
+
         /// <summary>
         /// Gets the currently running MiniProfiler for the current HttpContext; null if no MiniProfiler was <see cref="Start"/>ed.
         /// </summary>
@@ -459,21 +475,15 @@ namespace MvcMiniProfiler
         {
             get
             {
-                var context = HttpContext.Current;
-                if (context == null) return null;
-
-                return context.Items[CacheKey] as MiniProfiler;
+                return CurrentProfilerProvider == null ? null : CurrentProfilerProvider.GetCurrentProfiler();
             }
-            private set
+            protected set
             {
-                var context = HttpContext.Current;
-                if (context == null) return;
+                if (CurrentProfilerProvider == null) return;
 
-                context.Items[CacheKey] = value;
+                CurrentProfilerProvider.SetCurrentProfiler(value);
             }
         }
-
-        private const string CacheKey = ":mini-profiler:";
 
         /// <summary>
         /// Renders the current <see cref="MiniProfiler"/> to json.

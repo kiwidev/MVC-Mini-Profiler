@@ -31,6 +31,12 @@ namespace MvcMiniProfiler
 
         bool _isActive;
         bool IDbProfiler.IsActive { get { return _isActive; } }
- 
+
+        /// <summary>
+        /// Flags stating whether the DbProfiler is active.  Set this to true once the
+        /// profiler has been initialised.
+        /// This is set to false as part of <see cref="StopImpl"/>.
+        /// </summary>
+        protected bool IsActive { set { _isActive = value; } }
     }
 }

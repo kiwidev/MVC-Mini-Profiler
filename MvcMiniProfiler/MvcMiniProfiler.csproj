@@ -84,6 +84,10 @@
     <Compile Include="Helpers\SqlMapper.cs" />
     <Compile Include="Helpers\StackTraceSnippet.cs" />
     <Compile Include="Helpers\HaackFormatter.cs" />
+    <Compile Include="HttpContextProfilerProvider.cs">
+      <DependentUpon>ICurrentProfilerProvider.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ICurrentProfilerProvider.cs" />
     <Compile Include="IpAddressProvider.cs">
       <DependentUpon>IUserProvider.cs</DependentUpon>
     </Compile>
